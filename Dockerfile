@@ -1,4 +1,4 @@
-FROM alpine:3.7 as protoc_builder
+FROM alpine:3.8 as protoc_builder
 RUN apk add --no-cache build-base curl automake autoconf libtool git zlib-dev
 
 ENV GRPC_VERSION=1.16.0 \
@@ -68,6 +68,7 @@ RUN go get -u -v -ldflags '-w -s' \
         github.com/mwitkow/go-proto-validators/protoc-gen-govalidators \
         moul.io/protoc-gen-gotemplate \
         github.com/micro/protoc-gen-micro \
+        github.com/ti/protoc-gen-rest \
         && install -c ${GOPATH}/bin/protoc-gen* ${OUTDIR}/usr/bin/
 
 RUN mkdir -p ${GOPATH}/src/github.com/pseudomuto/protoc-gen-doc && \
@@ -142,7 +143,7 @@ RUN upx --lzma \
         /out/usr/bin/grpc_* \
         /out/usr/bin/protoc-gen-*
 
-FROM alpine:3.7
+FROM alpine:3.8
 RUN apk add --no-cache libstdc++
 COPY --from=packer /out/ /
 COPY --from=rust_builder /out/ /
@@ -161,6 +162,14 @@ RUN apk add --no-cache curl && \
         mkdir -p /protobuf/google/api && \
         for f in annotations http; do \
         curl -L -o /protobuf/google/api/${f}.proto https://raw.githubusercontent.com/grpc-ecosystem/grpc-gateway/master/third_party/googleapis/google/api/${f}.proto; \
+        done && \
+        mkdir -p /protobuf/google/rpc && \
+        for f in code error_details status; do \
+        curl -L -o /protobuf/google/rpc/${f}.proto https://raw.githubusercontent.com/grpc-ecosystem/grpc-gateway/master/third_party/googleapis/google/rpc/${f}.proto; \
+        done && \
+        mkdir -p /protobuf/protoc-gen-swagger/options && \
+        for f in annotations openapiv2; do \
+        curl -L -o /protobuf/protoc-gen-swagger/options/${f}.proto https://raw.githubusercontent.com/grpc-ecosystem/grpc-gateway/master/protoc-gen-swagger/options/${f}.proto; \
         done && \
         mkdir -p /protobuf/github.com/gogo/protobuf/gogoproto && \
         curl -L -o /protobuf/github.com/gogo/protobuf/gogoproto/gogo.proto https://raw.githubusercontent.com/gogo/protobuf/master/gogoproto/gogo.proto && \
